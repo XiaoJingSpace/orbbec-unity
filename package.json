@@ -1,0 +1,26 @@
+{
+  "name": "com.orbbec.unity",
+  "version": "2.10.6",
+  "displayName": "Orbbec Unity",
+  "description": "Read Orbbec device status and camera frames from Orbbec SDK.",
+  "unity": "2021.2",
+  "keywords": [
+    "orbbec",
+    "camera",
+    "depth"
+  ],
+  "author": {
+    "name": "Orbbec"
+  },
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.unity.textmeshpro": "3.0.6"
+  },
+  "samples": [
+    {
+      "displayName": "设备预览",
+      "description": "左右手各一台设备，Index 0 与 Index 1。UMI 为彩色、左红外、右红外。",
+      "path": "Samples~/DevicePreview"
+    }
+  ]
+}
