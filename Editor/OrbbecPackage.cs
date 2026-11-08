@@ -438,10 +438,12 @@ cp -a ""$package/Plugins~/$platform/x86_64/."" ""$package/Plugins/x86_64/""
 
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(output.FindPropertyRelative("image"), new GUIContent("RawImage"));
+                EditorGUILayout.PropertyField(output.FindPropertyRelative("resolution"), new GUIContent("分辨率"));
+                EditorGUILayout.PropertyField(output.FindPropertyRelative("imageStatus"), new GUIContent("状态"));
                 EditorGUI.indentLevel--;
             }
 
-            EditorGUILayout.HelpBox("勾选要显示的画面，并把场景里的 RawImage 拖到对应项。布局由业务层摆放。", MessageType.None);
+            EditorGUILayout.HelpBox("勾选要显示的画面，并把场景里的 RawImage 拖到对应项。分辨率和状态留空则不写文字。状态放在画面右上角，文字是 Loading、Live、Failed。布局由业务层摆放。", MessageType.None);
             EditorGUILayout.HelpBox("打包后从 StreamingAssets/" + OrbbecPaths.ConfigFileName(serializedObject.FindProperty("configPath").stringValue) + " 读取。留空则使用包内默认配置。", MessageType.None);
             EditorGUILayout.HelpBox("左右手在 StreamingAssets/OrbbecHands.json 里用序列号配置。没填序列号时，枚举序号 0 是左手，1 是右手。", MessageType.None);
             EditorGUILayout.HelpBox("扫描间隔在 StreamingAssets/OrbbecSettings.json 的 scanIntervalSeconds，单位秒。没找到设备会按这个间隔重扫，掉线后同样重扫。", MessageType.None);
@@ -464,6 +466,8 @@ cp -a ""$package/Plugins~/$platform/x86_64/."" ""$package/Plugins/x86_64/""
                 output.FindPropertyRelative("enabled").boolValue = false;
                 output.FindPropertyRelative("stream").intValue = (int)streams[i].stream;
                 output.FindPropertyRelative("image").objectReferenceValue = null;
+                output.FindPropertyRelative("resolution").objectReferenceValue = null;
+                output.FindPropertyRelative("imageStatus").objectReferenceValue = null;
             }
         }
 

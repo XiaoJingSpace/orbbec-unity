@@ -19,6 +19,8 @@ namespace OrbbecUnity
             public bool enabled;
             public OrbbecPreviewStream stream;
             public RawImage image;
+            public TextMeshProUGUI resolution;
+            public TextMeshProUGUI imageStatus;
         }
 
         sealed class StreamState
@@ -31,6 +33,7 @@ namespace OrbbecUnity
             public bool Logged;
             public bool LoggedIssue;
             public bool Bound;
+            public bool Live;
         }
 
         sealed class SharedTexture
@@ -54,7 +57,7 @@ namespace OrbbecUnity
         [Tooltip("留空时编辑器使用包内 Config/OrbbecSDKConfig.xml。打包后从 StreamingAssets 读取同名文件。")]
         public string configPath;
 
-        [Tooltip("勾选的画面，以及承接该画面的 RawImage")]
+        [Tooltip("勾选的画面、承接该画面的 RawImage，以及可选的分辨率和状态文本")]
         public Output[] outputs = Array.Empty<Output>();
 
         [Tooltip("显示设备状态的 TextMeshProUGUI。留空则不写文字")]
@@ -170,6 +173,7 @@ namespace OrbbecUnity
                 loggedFailure = null;
                 loggedGripper = false;
                 errorText = string.Empty;
+                ClearLive();
                 statusText = "已打开 " + label + " " + session.Status.Name;
                 OrbbecDeviceStatus opened = session.Status;
                 OrbbecLog.Info(label + " 加速度计 " + MotionText(opened.HasAccel, opened.AccelProfiles) + "，陀螺仪 " + MotionText(opened.HasGyro, opened.GyroProfiles));
@@ -200,6 +204,7 @@ namespace OrbbecUnity
             errorText = reason ?? string.Empty;
             loggedFailure = null;
             loggedGripper = false;
+            ClearLive();
             nextScan = Time.unscaledTime;
             RefreshStatusLabel();
         }
@@ -432,6 +437,12 @@ namespace OrbbecUnity
                 output.image.texture = state.Texture;
                 output.image.uvRect = uv;
                 output.image.color = Color.white;
+                state.Live = true;
+                if (output.resolution != null)
+                {
+                    output.resolution.text = video.Width + "x" + video.Height;
+                }
+
                 AspectRatioFitter fitter = output.image.GetComponent<AspectRatioFitter>();
                 if (fitter != null && video.Height > 0)
                 {
@@ -451,8 +462,51 @@ namespace OrbbecUnity
             return state;
         }
 
+        void ClearLive()
+        {
+            foreach (KeyValuePair<OrbbecPreviewStream, StreamState> pair in states)
+            {
+                pair.Value.Live = false;
+            }
+        }
+
+        void RefreshImageStatus()
+        {
+            if (outputs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < outputs.Length; i++)
+            {
+                Output output = outputs[i];
+                if (output == null || !output.enabled || output.imageStatus == null)
+                {
+                    continue;
+                }
+
+                output.imageStatus.text = ImageStatusText(output.stream);
+            }
+        }
+
+        string ImageStatusText(OrbbecPreviewStream stream)
+        {
+            if (session == null && !string.IsNullOrEmpty(errorText))
+            {
+                return "Failed";
+            }
+
+            if (states.TryGetValue(stream, out StreamState state) && state.Live)
+            {
+                return "Live";
+            }
+
+            return "Loading";
+        }
+
         void RefreshStatusLabel()
         {
+            RefreshImageStatus();
             if (statusLabel == null)
             {
                 return;
