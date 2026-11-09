@@ -27,6 +27,8 @@ namespace OrbbecUnity
         public float maximum = 100f;
 
         static Sprite glass;
+        int shownDigits = int.MinValue;
+        bool shownKnown;
 
         public static Sprite Glass()
         {
@@ -76,6 +78,14 @@ namespace OrbbecUnity
             OrbbecDeviceStatus status = preview != null ? preview.Status : null;
             float value = status == null ? float.NaN : Read(status);
             bool known = !float.IsNaN(value) && !float.IsInfinity(value);
+            int digits = known ? Mathf.RoundToInt(value) : int.MinValue;
+            if (digits == shownDigits && known == shownKnown)
+            {
+                return;
+            }
+
+            shownDigits = digits;
+            shownKnown = known;
             float span = Mathf.Max(0.001f, maximum - minimum);
             float amount = known ? Mathf.Clamp01((value - minimum) / span) : 0f;
             if (fill != null)

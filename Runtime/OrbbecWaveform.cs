@@ -47,6 +47,7 @@ namespace OrbbecUnity
         Sample[] samples = new Sample[2048];
         int head;
         int count;
+        bool meshIdle;
 
         public float VisibleMin { get; private set; } = -1f;
         public float VisibleMax { get; private set; } = 1f;
@@ -61,6 +62,7 @@ namespace OrbbecUnity
         {
             head = 0;
             count = 0;
+            meshIdle = true;
             SetVerticesDirty();
         }
 
@@ -94,7 +96,43 @@ namespace OrbbecUnity
                 return;
             }
 
+            Trim(Time.unscaledTime);
+            if (count == 0)
+            {
+                if (meshIdle)
+                {
+                    return;
+                }
+
+                meshIdle = true;
+                SetVerticesDirty();
+                return;
+            }
+
+            meshIdle = false;
             SetVerticesDirty();
+        }
+
+        void Trim(float now)
+        {
+            float keep = Mathf.Max(0.05f, windowSeconds) + 0.05f;
+            int length = samples.Length;
+            while (count > 0)
+            {
+                int oldest = head - count;
+                oldest %= length;
+                if (oldest < 0)
+                {
+                    oldest += length;
+                }
+
+                if (now - samples[oldest].Time <= keep)
+                {
+                    break;
+                }
+
+                count--;
+            }
         }
 
         public void RangeAt(float now, out float min, out float max)

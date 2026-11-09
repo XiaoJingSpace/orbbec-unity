@@ -103,6 +103,60 @@ namespace OrbbecUnity
         const int StreamCapacity = 16;
 
         [StructLayout(LayoutKind.Sequential)]
+        struct NativeStatusNumbers
+        {
+            public int Opened;
+            public int Streaming;
+            public int Pid;
+            public int Vid;
+            public int EgoValid;
+            public int EgoWorkState;
+            public int RecordingDurationValid;
+            public int BatteryValid;
+            public int HasBattery;
+            public int BatteryCharging;
+            public int BatteryTemperature;
+            public int ExtensionCount;
+            public int HasAccel;
+            public int HasGyro;
+            public int AccelProfiles;
+            public int GyroProfiles;
+            public int Offline;
+            public int MagEncoderPresent;
+            public int MagEncoderValid;
+            public int MagEncoderStatus;
+            public int AccelValid;
+            public int GyroValid;
+            public uint EgoSequence;
+            public uint EgoStateFlags;
+            public uint BatteryCapacity;
+            public uint BatteryVoltage;
+            public ulong DeviceState;
+            public ulong EgoErrorFlags;
+            public ulong StorageFreeBytes;
+            public ulong RecordingDurationMs;
+            public ulong MagEncoderTimestampUs;
+            public float CpuTemperature;
+            public float IrTemperature;
+            public float LdmTemperature;
+            public float MainBoardTemperature;
+            public float TecTemperature;
+            public float ImuTemperature;
+            public float RgbTemperature;
+            public float IrLeftTemperature;
+            public float IrRightTemperature;
+            public float ChipTopTemperature;
+            public float ChipBottomTemperature;
+            public float MagEncoderAngle;
+            public float AccelX;
+            public float AccelY;
+            public float AccelZ;
+            public float GyroX;
+            public float GyroY;
+            public float GyroZ;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         struct NativeStatus
         {
             public int Opened;
@@ -190,6 +244,11 @@ namespace OrbbecUnity
         static readonly Dictionary<string, SharedSession> sharedSessions = new Dictionary<string, SharedSession>();
         static readonly object sharedGate = new object();
         bool disposed;
+        int textCountdown;
+        IntPtr statusMemory;
+        int statusMemoryBytes;
+        IntPtr streamMemory;
+        int streamMemoryBytes;
 
         public int Index { get; private set; }
         public OrbbecDeviceStatus Status { get; } = new OrbbecDeviceStatus();
@@ -280,20 +339,28 @@ namespace OrbbecUnity
                 throw new InvalidOperationException("状态结构大小不一致，原生 " + nativeBytes + "，托管 " + managedBytes);
             }
 
-            IntPtr buffer = Marshal.AllocHGlobal(nativeBytes);
-            try
+            int numberBytes = Marshal.SizeOf<NativeStatusNumbers>();
+            int textOffset = (int)Marshal.OffsetOf(typeof(NativeStatus), "SdkVersion");
+            if (numberBytes != textOffset)
             {
-                if (OrbbecDevice_ReadStatus(Index, buffer) == 0)
-                {
-                    return;
-                }
-
-                NativeStatus native = Marshal.PtrToStructure<NativeStatus>(buffer);
-                CopyStatus(native);
+                throw new InvalidOperationException("状态数值区大小不一致");
             }
-            finally
+
+            IntPtr buffer = TakeMemory(ref statusMemory, ref statusMemoryBytes, nativeBytes);
+            if (OrbbecDevice_ReadStatus(Index, buffer) == 0)
             {
-                Marshal.FreeHGlobal(buffer);
+                return;
+            }
+
+            CopyNumbers(Marshal.PtrToStructure<NativeStatusNumbers>(buffer));
+            if (textCountdown <= 0)
+            {
+                textCountdown = 12;
+                CopyText(Marshal.PtrToStructure<NativeStatus>(buffer));
+            }
+            else
+            {
+                textCountdown--;
             }
         }
 
@@ -316,26 +383,19 @@ namespace OrbbecUnity
                 throw new InvalidOperationException("画面结构大小不一致");
             }
 
-            IntPtr buffer = Marshal.AllocHGlobal(stride * StreamCapacity);
-            try
+            IntPtr buffer = TakeMemory(ref streamMemory, ref streamMemoryBytes, stride * StreamCapacity);
+            int count = OrbbecDevice_CopyStreams(Index, buffer, StreamCapacity);
+            for (int i = 0; i < count; i++)
             {
-                int count = OrbbecDevice_CopyStreams(Index, buffer, StreamCapacity);
-                for (int i = 0; i < count; i++)
+                NativeStream native = Marshal.PtrToStructure<NativeStream>(IntPtr.Add(buffer, i * stride));
+                destination.Add(new OrbbecStreamView
                 {
-                    NativeStream native = Marshal.PtrToStructure<NativeStream>(IntPtr.Add(buffer, i * stride));
-                    destination.Add(new OrbbecStreamView
-                    {
-                        Stream = (OrbbecPreviewStream)native.Stream,
-                        Width = native.Width,
-                        Height = native.Height,
-                        SourceFormat = native.Format,
-                        FrameIndex = native.FrameIndex,
-                    });
-                }
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(buffer);
+                    Stream = (OrbbecPreviewStream)native.Stream,
+                    Width = native.Width,
+                    Height = native.Height,
+                    SourceFormat = native.Format,
+                    FrameIndex = native.FrameIndex,
+                });
             }
         }
 
@@ -348,6 +408,31 @@ namespace OrbbecUnity
 
             disposed = true;
             OrbbecDevice_Close(Index);
+            FreeMemory(ref statusMemory);
+            FreeMemory(ref streamMemory);
+        }
+
+        static IntPtr TakeMemory(ref IntPtr memory, ref int capacity, int bytes)
+        {
+            if (memory == IntPtr.Zero || capacity < bytes)
+            {
+                FreeMemory(ref memory);
+                memory = Marshal.AllocHGlobal(bytes);
+                capacity = bytes;
+            }
+
+            return memory;
+        }
+
+        static void FreeMemory(ref IntPtr memory)
+        {
+            if (memory == IntPtr.Zero)
+            {
+                return;
+            }
+
+            Marshal.FreeHGlobal(memory);
+            memory = IntPtr.Zero;
         }
 
         void Open(int deviceIndex, string configPath)
@@ -380,26 +465,13 @@ namespace OrbbecUnity
             OrbbecLog.Info("设备 " + slot + " 已打开 " + Status.Name + " SN " + Status.SerialNumber);
         }
 
-        void CopyStatus(NativeStatus native)
+        void CopyNumbers(NativeStatusNumbers native)
         {
             Status.Index = Index;
-            Status.Name = Text(native.Name);
-            Status.SerialNumber = Text(native.SerialNumber);
-            Status.FirmwareVersion = Text(native.FirmwareVersion);
-            Status.HardwareVersion = Text(native.HardwareVersion);
-            Status.ConnectionType = Text(native.ConnectionType);
-            Status.WifiName = Text(native.WifiName);
-            Status.IpAddress = Text(native.IpAddress);
-            Status.Uid = Text(native.Uid);
             Status.Pid = native.Pid;
             Status.Vid = native.Vid;
             Status.DeviceState = native.DeviceState;
             Status.Streaming = native.Streaming != 0;
-            Status.AsicName = Text(native.AsicName);
-            Status.AsicSerial = Text(native.AsicSerial);
-            Status.SubsystemVersion = Text(native.SubsystemVersion);
-            Status.SdkVersion = Text(native.SdkVersion);
-            Status.LastError = Text(native.LastError);
             Status.EgoStateValid = native.EgoValid != 0;
             Status.EgoWorkState = native.EgoWorkState;
             Status.EgoSequence = native.EgoSequence;
@@ -443,6 +515,23 @@ namespace OrbbecUnity
             Status.GyroX = native.GyroX;
             Status.GyroY = native.GyroY;
             Status.GyroZ = native.GyroZ;
+        }
+
+        void CopyText(NativeStatus native)
+        {
+            Status.Name = Text(native.Name);
+            Status.SerialNumber = Text(native.SerialNumber);
+            Status.FirmwareVersion = Text(native.FirmwareVersion);
+            Status.HardwareVersion = Text(native.HardwareVersion);
+            Status.ConnectionType = Text(native.ConnectionType);
+            Status.WifiName = Text(native.WifiName);
+            Status.IpAddress = Text(native.IpAddress);
+            Status.Uid = Text(native.Uid);
+            Status.AsicName = Text(native.AsicName);
+            Status.AsicSerial = Text(native.AsicSerial);
+            Status.SubsystemVersion = Text(native.SubsystemVersion);
+            Status.SdkVersion = Text(native.SdkVersion);
+            Status.LastError = Text(native.LastError);
             Status.Extensions.Clear();
             int count = native.ExtensionCount;
             if (count < 0)

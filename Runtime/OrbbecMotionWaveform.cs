@@ -21,6 +21,11 @@ namespace OrbbecUnity
         public TextMeshProUGUI scaleMax;
         public TextMeshProUGUI scaleMin;
 
+        const float SampleInterval = 0.05f;
+        const float ReadoutInterval = 0.1f;
+        float nextSample;
+        float nextReadout;
+
         void Awake()
         {
             if (waveform == null)
@@ -45,26 +50,43 @@ namespace OrbbecUnity
             bool valid = status != null && !status.Offline && (accelerometer ? status.AccelValid : status.GyroValid);
             if (!valid || waveform == null)
             {
-                WriteReadout(WaitingText(status));
+                if (Time.unscaledTime >= nextReadout)
+                {
+                    nextReadout = Time.unscaledTime + ReadoutInterval;
+                    WriteReadout(WaitingText(status));
+                }
+
                 return;
             }
 
-            float x = accelerometer ? status.AccelX : status.GyroX;
-            float y = accelerometer ? status.AccelY : status.GyroY;
-            float z = accelerometer ? status.AccelZ : status.GyroZ;
-            waveform.Push(Time.unscaledTime, x, y, z);
-            WriteReadout(ValueText(x, y, z));
-            float min;
-            float max;
-            waveform.RangeAt(Time.unscaledTime, out min, out max);
-            if (scaleMax != null)
+            float now = Time.unscaledTime;
+            if (now >= nextSample)
             {
-                scaleMax.text = max.ToString("0.00");
-            }
+                nextSample = now + SampleInterval;
+                float x = accelerometer ? status.AccelX : status.GyroX;
+                float y = accelerometer ? status.AccelY : status.GyroY;
+                float z = accelerometer ? status.AccelZ : status.GyroZ;
+                waveform.Push(now, x, y, z);
+                if (now >= nextReadout)
+                {
+                    nextReadout = now + ReadoutInterval;
+                    WriteReadout(ValueText(x, y, z));
+                    if (scaleMax != null || scaleMin != null)
+                    {
+                        float min;
+                        float max;
+                        waveform.RangeAt(now, out min, out max);
+                        if (scaleMax != null)
+                        {
+                            scaleMax.text = max.ToString("0.00");
+                        }
 
-            if (scaleMin != null)
-            {
-                scaleMin.text = min.ToString("0.00");
+                        if (scaleMin != null)
+                        {
+                            scaleMin.text = min.ToString("0.00");
+                        }
+                    }
+                }
             }
         }
 
@@ -90,7 +112,7 @@ namespace OrbbecUnity
 
         void WriteReadout(string value)
         {
-            if (readout != null)
+            if (readout != null && readout.text != value)
             {
                 readout.text = value;
             }

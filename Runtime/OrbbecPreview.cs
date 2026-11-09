@@ -30,6 +30,7 @@ namespace OrbbecUnity
             public int Height;
             public int Format;
             public ulong FrameIndex;
+            public string ResolutionText;
             public bool Logged;
             public bool LoggedIssue;
             public bool Bound;
@@ -51,6 +52,7 @@ namespace OrbbecUnity
         int deviceIndex;
         string resolvedConfig;
         float nextScan;
+        float nextStatusLabel;
         string loggedFailure;
         bool loggedGripper;
 
@@ -222,6 +224,7 @@ namespace OrbbecUnity
             loggedGripper = false;
             ClearLive();
             nextScan = Time.unscaledTime;
+            nextStatusLabel = 0f;
             RefreshStatusLabel();
         }
 
@@ -379,6 +382,11 @@ namespace OrbbecUnity
             }
 
             StreamState state = StateOf(video.Stream);
+            if (state.ResolutionText == null || state.Width != video.Width || state.Height != video.Height)
+            {
+                state.ResolutionText = video.Width + "x" + video.Height;
+            }
+
             state.Width = video.Width;
             state.Height = video.Height;
             state.Format = video.SourceFormat;
@@ -454,9 +462,9 @@ namespace OrbbecUnity
                 output.image.uvRect = uv;
                 output.image.color = Color.white;
                 state.Live = true;
-                if (output.resolution != null)
+                if (output.resolution != null && output.resolution.text != state.ResolutionText)
                 {
-                    output.resolution.text = video.Width + "x" + video.Height;
+                    output.resolution.text = state.ResolutionText;
                 }
 
                 AspectRatioFitter fitter = output.image.GetComponent<AspectRatioFitter>();
@@ -501,7 +509,11 @@ namespace OrbbecUnity
                     continue;
                 }
 
-                output.imageStatus.text = ImageStatusText(output.stream);
+                string next = ImageStatusText(output.stream);
+                if (output.imageStatus.text != next)
+                {
+                    output.imageStatus.text = next;
+                }
             }
         }
 
@@ -523,10 +535,12 @@ namespace OrbbecUnity
         void RefreshStatusLabel()
         {
             RefreshImageStatus();
-            if (statusLabel == null)
+            if (statusLabel == null || Time.unscaledTime < nextStatusLabel)
             {
                 return;
             }
+
+            nextStatusLabel = Time.unscaledTime + 0.2f;
 
             statusBuilder.Length = 0;
             statusBuilder.AppendLine(statusText);
