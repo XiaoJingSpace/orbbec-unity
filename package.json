@@ -19,7 +19,7 @@
   "samples": [
     {
       "displayName": "设备预览",
-      "description": "左右手各一台设备，Index 0 与 Index 1。UMI 为彩色、左红外、右红外。",
+      "description": "左右手各一台设备。状态栏底部是对应夹爪的加速度计和陀螺仪波形。",
       "path": "Samples~/DevicePreview"
     }
   ]
