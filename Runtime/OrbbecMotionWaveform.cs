@@ -72,20 +72,20 @@ namespace OrbbecUnity
         {
             if (status != null && status.Offline)
             {
-                return Title() + "  设备离线";
+                return "设备离线";
             }
 
             if (status == null)
             {
-                return Title() + "  等待设备";
+                return "等待设备";
             }
 
-            return Title() + "  等待数据";
+            return "等待数据";
         }
 
         string ValueText(float x, float y, float z)
         {
-            return "<color=#F25461>X " + x.ToString("0.000") + "</color>   <color=#59DB8C>Y " + y.ToString("0.000") + "</color>   <color=#61ABFA>Z " + z.ToString("0.000") + "</color>  " + Unit();
+            return "<color=#F25461>X " + x.ToString("0.000") + "</color>    <color=#59DB8C>Y " + y.ToString("0.000") + "</color>    <color=#61ABFA>Z " + z.ToString("0.000") + "</color>";
         }
 
         void WriteReadout(string value)
@@ -94,16 +94,6 @@ namespace OrbbecUnity
             {
                 readout.text = value;
             }
-        }
-
-        string Title()
-        {
-            return source == OrbbecMotionSource.Accelerometer ? "加速度计" : "陀螺仪";
-        }
-
-        string Unit()
-        {
-            return source == OrbbecMotionSource.Accelerometer ? "m/s²" : "rad/s";
         }
     }
 }

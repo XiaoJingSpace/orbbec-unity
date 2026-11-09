@@ -39,23 +39,32 @@ namespace OrbbecUnity
         {
             GameObject panel = CreatePanel(title, parent, anchorMin, anchorMax, new Vector2(0f, source == OrbbecMotionSource.Gyroscope ? 2f : 0f), new Vector2(0f, source == OrbbecMotionSource.Gyroscope ? 0f : -2f));
 
-            TextMeshProUGUI titleText = CreateText(panel.transform, "Title", title, 13, TextAlignmentOptions.MidlineLeft, new Color(0.75f, 0.82f, 0.88f, 1f));
+            Color label = new Color(0.75f, 0.82f, 0.88f, 1f);
+            TextMeshProUGUI titleText = CreateText(panel.transform, "Title", title, 13, TextAlignmentOptions.MidlineLeft, label);
             RectTransform titleRect = titleText.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
-            titleRect.anchorMax = new Vector2(0f, 1f);
-            titleRect.pivot = new Vector2(0f, 1f);
-            titleRect.anchoredPosition = new Vector2(2f, 0f);
-            titleRect.sizeDelta = new Vector2(72f, 22f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.offsetMin = new Vector2(2f, -16f);
+            titleRect.offsetMax = new Vector2(-52f, 0f);
 
-            TextMeshProUGUI readout = CreateText(panel.transform, "Readout", "等待设备", 13, TextAlignmentOptions.MidlineRight, new Color(0.75f, 0.82f, 0.88f, 1f));
+            string unit = source == OrbbecMotionSource.Accelerometer ? "m/s2" : "rad/s";
+            TextMeshProUGUI unitText = CreateText(panel.transform, "Unit", unit, 11, TextAlignmentOptions.MidlineRight, label);
+            RectTransform unitRect = unitText.rectTransform;
+            unitRect.anchorMin = new Vector2(1f, 1f);
+            unitRect.anchorMax = new Vector2(1f, 1f);
+            unitRect.pivot = new Vector2(1f, 1f);
+            unitRect.anchoredPosition = new Vector2(-2f, 0f);
+            unitRect.sizeDelta = new Vector2(48f, 16f);
+
+            TextMeshProUGUI readout = CreateText(panel.transform, "Readout", "等待设备", 12, TextAlignmentOptions.MidlineLeft, label);
+            readout.overflowMode = TextOverflowModes.Ellipsis;
             RectTransform readoutRect = readout.rectTransform;
             readoutRect.anchorMin = new Vector2(0f, 1f);
             readoutRect.anchorMax = new Vector2(1f, 1f);
-            readoutRect.pivot = new Vector2(1f, 1f);
-            readoutRect.anchoredPosition = new Vector2(-2f, 0f);
-            readoutRect.sizeDelta = new Vector2(-78f, 22f);
+            readoutRect.offsetMin = new Vector2(2f, -34f);
+            readoutRect.offsetMax = new Vector2(-2f, -16f);
 
-            GameObject plotObject = CreatePanel("Waveform", panel.transform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(0f, -24f));
+            GameObject plotObject = CreatePanel("Waveform", panel.transform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(0f, -36f));
             OrbbecWaveform waveform = plotObject.AddComponent<OrbbecWaveform>();
             waveform.color = Color.white;
             waveform.windowSeconds = 6f;
