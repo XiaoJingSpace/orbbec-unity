@@ -5,7 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
-
+using System.Collections;
 namespace OrbbecUnity
 {
     /// <summary>
@@ -92,15 +92,31 @@ namespace OrbbecUnity
             return null;
         }
 
-        void Start()
+        //void Start()
+        //{
+        //    _ = OrbbecGfx.Available;
+        //    resolvedConfig = OrbbecPaths.ResolveConfig(configPath);
+        //    deviceIndex = (int)hand;
+        //    TryConnect();
+        //    RefreshStatusLabel();
+        //}
+        IEnumerator Start()
         {
+            // 先等待一帧，让UI有机会渲染
+            yield return null;
+            // 再等待0.2秒，让UI先稳定显示
+            yield return new WaitForSecondsRealtime(0.2f);
+
             _ = OrbbecGfx.Available;
+
             resolvedConfig = OrbbecPaths.ResolveConfig(configPath);
+
             deviceIndex = (int)hand;
+
             TryConnect();
+
             RefreshStatusLabel();
         }
-
         void Update()
         {
             if (session == null)
