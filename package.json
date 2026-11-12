@@ -1,6 +1,6 @@
 {
   "name": "com.orbbec.unity",
-  "version": "2.10.7",
+  "version": "2.10.8",
   "displayName": "Orbbec Unity",
   "description": "Read Orbbec device status and camera frames from Orbbec SDK.",
   "unity": "2021.2",
